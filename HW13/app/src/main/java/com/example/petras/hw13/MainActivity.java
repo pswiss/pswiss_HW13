@@ -30,6 +30,8 @@ import static android.graphics.Color.blue;
 import static android.graphics.Color.green;
 import static android.graphics.Color.red;
 import static android.graphics.Color.rgb;
+import static android.hardware.Camera.Parameters.EFFECT_NEGATIVE;
+import static android.hardware.Camera.Parameters.FLASH_MODE_TORCH;
 
 public class MainActivity extends Activity implements TextureView.SurfaceTextureListener {
     private Camera mCamera;
@@ -107,6 +109,8 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         parameters.setPreviewSize(640, 480);
         parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY); // no autofocusing
         parameters.setAutoExposureLock(true); // keep the white balance constant
+        parameters.setFlashMode(FLASH_MODE_TORCH);
+        parameters.setColorEffect(EFFECT_NEGATIVE);
         mCamera.setParameters(parameters);
         mCamera.setDisplayOrientation(90); // rotate to portrait mode
 
@@ -135,20 +139,40 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
         final Canvas c = mSurfaceHolder.lockCanvas();
         if (c != null) {
-            int thresh = 0; // comparison value
-            int[] pixels = new int[bmp.getWidth()]; // pixels[] is the RGBA data
-            int startY = 200; // which row in the bitmap to analyze to read
-            bmp.getPixels(pixels, 0, bmp.getWidth(), 0, startY, bmp.getWidth(), 1);
 
-            // in the row, see if there is more green than red
+            int numLines = 50;
+            int startY = bmp.getHeight()/(2*numLines); // which row in the bitmap to analyze to read
+            int lineSpacing = bmp.getHeight()/(numLines);
+            int targetLine;
+
+            int thresh = myControl.getProgress(); // comparison value
+            int[] pixels = new int[bmp.getWidth()]; // pixels[] is the RGBA data
+
+/*
+            bmp.getPixels(pixels, 0, bmp.getWidth(), 0, startY, bmp.getWidth(), 1);
             for (int i = 0; i < bmp.getWidth(); i++) {
                 if ((green(pixels[i]) - red(pixels[i])) > thresh) {
                     pixels[i] = rgb(0, 255, 0); // over write the pixel with pure green
                 }
             }
-
             // update the row
             bmp.setPixels(pixels, 0, bmp.getWidth(), 0, startY, bmp.getWidth(), 1);
+*/
+
+            for( int j=0; j< numLines; j++) {
+                targetLine = startY+j*lineSpacing;
+                // in the row, see if there is more green than red
+                bmp.getPixels(pixels, 0, bmp.getWidth(), 0, targetLine, bmp.getWidth(), 1);
+                for (int i = 0; i < bmp.getWidth(); i++) {
+                    if ((green(pixels[i]) - red(pixels[i])) > thresh) {
+                        pixels[i] = rgb(0, 255, 0); // over write the pixel with pure green
+                    }
+                }
+                // update the row
+                bmp.setPixels(pixels, 0, bmp.getWidth(), 0, targetLine, bmp.getWidth(), 1);
+            }
+
+
         }
 
         // draw a circle at some position
